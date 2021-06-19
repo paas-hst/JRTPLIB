@@ -110,6 +110,9 @@ public:
 	 */ 
 	int BuildBYEPacket(RTCPCompoundPacket **pack,const void *reason,size_t reasonlength,bool useSRifpossible = true);
 
+    /** Builds a RTCP FIR packet with SSRC. */
+    int BuildFIRPacket(char* buf, uint32_t len, uint32_t ssrc);
+
 	/** Sets the RTCP interval for the SDES name item.
 	 *  After all possible sources in the source table have been processed, the class will check if other 
 	 *  SDES items need to be sent. If \c count is zero or negative, nothing will happen. If \c count 

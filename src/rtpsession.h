@@ -204,6 +204,9 @@ public:
 	 *  RTPSession::OnChangeRTPOrRTCPData function. */
 	int SendRawData(const void *data, size_t len, bool usertpchannel);
 
+    /** Send RTCP FIR packet(RFC5104) */
+    int SendRTCPFIRPacket(int32_t ssrc);
+
 	/** Sets the default payload type for RTP packets to \c pt. */
 	int SetDefaultPayloadType(uint8_t pt);
 

@@ -40,6 +40,111 @@
 
 #include "rtpdebug.h"
 
+
+namespace // from ortp
+{
+typedef enum {
+    RTCP_SR = 200,
+    RTCP_RR = 201,
+    RTCP_SDES = 202,
+    RTCP_BYE = 203,
+    RTCP_APP = 204,
+    RTCP_RTPFB = 205,
+    RTCP_PSFB = 206,
+    RTCP_XR = 207
+} rtcp_type_t;
+
+typedef enum {
+    RTCP_PSFB_PLI = 1,
+    RTCP_PSFB_SLI = 2,
+    RTCP_PSFB_RPSI = 3,
+    RTCP_PSFB_FIR = 4,
+    RTCP_PSFB_AFB = 15
+} rtcp_psfb_type_t;
+
+typedef struct rtcp_fb_fir_fci {
+    uint32_t ssrc;
+    uint8_t seq_nr;
+    uint8_t pad1;
+    uint16_t pad2;
+} rtcp_fb_fir_fci_t;
+
+typedef struct rtcp_fb_header {
+    uint32_t packet_sender_ssrc;
+    uint32_t media_source_ssrc;
+} rtcp_fb_header_t;
+
+typedef struct rtcp_common_header
+{
+#ifdef ORTP_BIGENDIAN
+    uint16_t version:2;
+    uint16_t padbit:1;
+    uint16_t rc:5;
+    uint16_t packet_type:8;
+#else
+    uint16_t rc:5;
+    uint16_t padbit:1;
+    uint16_t version:2;
+    uint16_t packet_type:8;
+#endif
+    uint16_t length:16;
+} rtcp_common_header_t;
+
+#define rtcp_common_header_set_version(ch,v) (ch)->version=v
+#define rtcp_common_header_set_padbit(ch,p) (ch)->padbit=p
+#define rtcp_common_header_set_rc(ch,rc) (ch)->rc=rc
+#define rtcp_common_header_set_packet_type(ch,pt) (ch)->packet_type=pt
+#define rtcp_common_header_set_length(ch,l) (ch)->length=htons(l)
+
+#define rtcp_common_header_get_version(ch) ((ch)->version)
+#define rtcp_common_header_get_padbit(ch) ((ch)->padbit)
+#define rtcp_common_header_get_rc(ch) ((ch)->rc)
+#define rtcp_common_header_get_packet_type(ch) ((ch)->packet_type)
+#define rtcp_common_header_get_length(ch)   ntohs((ch)->length)
+
+void rtcp_common_header_init(rtcp_common_header_t *ch, int type, int rc, size_t bytes_len)
+{
+    rtcp_common_header_set_version(ch,2);
+    rtcp_common_header_set_padbit(ch,0);
+    rtcp_common_header_set_packet_type(ch,type);
+    rtcp_common_header_set_rc(ch,rc);   /* as we don't yet support multi source receiving */
+    rtcp_common_header_set_length(ch,(unsigned short)((bytes_len/4)-1));
+}
+
+int make_rtcp_fb_fir(char* buf, uint32_t len, int ssrc)
+{
+    rtcp_common_header_t *ch;
+    rtcp_fb_header_t *fbh;
+    rtcp_fb_fir_fci_t *fci;
+
+    uint32_t size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_fir_fci_t);
+    if (size > len) {
+        return 0;
+    }
+
+    /* Fill FIR */
+    ch = (rtcp_common_header_t *)buf;
+    buf += sizeof(rtcp_common_header_t);
+    fbh = (rtcp_fb_header_t *)buf;
+    buf += sizeof(rtcp_fb_header_t);
+    fci = (rtcp_fb_fir_fci_t *)buf;
+
+    fbh->packet_sender_ssrc = htonl(ssrc);
+    fbh->media_source_ssrc = htonl(0);
+    fci->ssrc = htonl(ssrc);
+    fci->seq_nr = 1;
+    fci->pad1 = 0;
+    fci->pad2 = 0;
+
+    /* Fill common header */
+    rtcp_common_header_init(ch, RTCP_PSFB, RTCP_PSFB_FIR, size);
+
+    return size;
+}
+
+} // namespace
+
+
 namespace jrtplib
 {
 
@@ -733,6 +838,11 @@ int RTCPPacketBuilder::BuildBYEPacket(RTCPCompoundPacket **pack,const void *reas
 
 	*pack = rtcpcomppack;
 	return 0;
+}
+
+int RTCPPacketBuilder::BuildFIRPacket(char* buf, uint32_t len, uint32_t ssrc)
+{
+    return make_rtcp_fb_fir(buf, len, ssrc);
 }
 
 } // end namespace

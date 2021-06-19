@@ -138,10 +138,13 @@
 #define RTPMEM_TYPE_CLASS_SDESSOURCE						31
 
 /** Buffer to store a HashElement instance for the source table. */
-#define RTPMEM_TYPE_CLASS_SOURCETABLEHASHELEMENT				32
+#define RTPMEM_TYPE_CLASS_SOURCETABLEHASHELEMENT			32
 
 /** Buffer that's used when encrypting a packet. */
-#define RTPMEM_TYPE_BUFFER_SRTPDATA								33
+#define RTPMEM_TYPE_BUFFER_SRTPDATA							33
+
+/** Buffer to store an RTCP packet. */
+#define RTPMEM_TYPE_BUFFER_RTCPPACKET                       34
 
 namespace jrtplib
 {

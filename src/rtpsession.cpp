@@ -890,6 +890,29 @@ int RTPSession::SendUnknownPacket(bool sr, uint8_t payload_type, uint8_t subtype
 
 #endif // RTP_SUPPORT_RTCPUNKNOWN 
 
+int RTPSession::SendRTCPFIRPacket(int32_t ssrc)
+{
+    if (!created)
+        return ERR_RTP_SESSION_NOTCREATED;
+   
+    int len = 0;
+    char* buf = new char[1024];
+
+    BUILDER_LOCK
+    if ((len = rtcpbuilder.BuildFIRPacket(buf, 1024, ssrc)) <= 0) {
+        BUILDER_UNLOCK
+        delete [] buf;
+        return ERR_RTP_PACKET_INVALIDPACKET;
+    }
+    BUILDER_UNLOCK
+        
+    int status = SendRTCPData(buf, len);
+
+    delete [] buf;
+
+    return status;
+}
+
 int RTPSession::SendRawData(const void *data, size_t len, bool usertpchannel)
 {
 	if (!created)
